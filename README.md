@@ -2,6 +2,6 @@
 
 Library Book Lending and Usage Analysis System for **VCET** (Reg No: 34).
 
-- **Backend:** Java REST API (Port 8080)
-- **Database:** MySQL (cet_ilms_reg34)
-- **Frontend:** Local web server (localhost:3000)
+- **Backend:** Java REST API (Port `8080`)
+- **Database:** MySQL (`vcet_ilms_reg34`)
+- **Frontend:** Local web server (`localhost:3000`)
