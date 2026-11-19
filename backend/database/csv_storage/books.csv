@@ -1,0 +1,8 @@
+book_id,isbn,title,author,category,total_copies,available_copies,book_type,borrow_count,added_date
+102,978-0133943030,Software Engineering,Ian Sommerville,Engineering,18,16,Physical,42,2026-07-01
+103,978-1260440232,Java: The Complete Reference,Herbert Schildt,Software & Java,14,13,Physical,34,2026-07-02
+104,978-0132126953,Computer Networks,Andrew S. Tanenbaum,Computer Networks,12,11,Physical,22,2026-07-03
+105,978-0134610993,Artificial Intelligence: A Modern Approach,Stuart Russell,Science & AI,10,10,Physical,19,2026-07-05
+106,978-0124077263,Digital Design & Computer Architecture,David Harris,Engineering,9,8,Physical,15,2026-07-06
+107,978-1491957660,Python for Data Analysis,Wes McKinney,Science & AI,10,10,E-Book,27,2026-07-08
+108,978-0132350884,Clean Code,Robert C. Martin,Software & Java,10,10,E-Book,24,2026-07-10

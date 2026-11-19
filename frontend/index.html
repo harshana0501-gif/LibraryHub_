@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Library Management - ILMS Dashboard (Reg No: 34)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f4f6f9;
+      --surface: #ffffff;
+      --border: #e5e9f0;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --primary: #10a37f;
+      --primary-light: #e6f6f2;
+      --blue: #2563eb;
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --purple: #7c3aed;
+      --teal: #06b6d4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background: var(--bg); color: var(--text-main); display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 240px; background: var(--surface); border-right: 1px solid var(--border);
+      padding: 20px 14px; display: flex; flex-direction: column; justify-content: space-between;
+      position: fixed; top: 0; bottom: 0; left: 0; z-index: 20;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; padding: 4px 8px 20px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+    .brand-icon {
+      width: 36px; height: 36px; border-radius: 9px; background: var(--primary);
+      display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 18px;
+    }
+    .brand-text h2 { font-size: 14px; font-weight: 700; line-height: 1.2; }
+    .brand-text span { font-size: 11px; color: var(--text-muted); }
+
+    .nav-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px;
+      font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: 0.15s;
+    }
+    .nav-item:hover { background: #f1f5f9; color: var(--text-main); }
+    .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+
+    .sidebar-footer { padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid var(--border); font-size: 11px; color: var(--text-muted); }
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-right: 6px; }
+    .status-dot.offline { background: var(--amber); }
+
+    .main { margin-left: 240px; flex: 1; padding: 20px 26px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+    .page-title h1 { font-size: 20px; font-weight: 700; }
+    .page-title p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .topbar-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .pill {
+      background: var(--surface); border: 1px solid var(--border); padding: 6px 12px;
+      border-radius: 8px; font-size: 12px; font-weight: 500; color: var(--text-main);
+    }
+    .search-input {
+      background: var(--surface); border: 1px solid var(--border); padding: 7px 12px;
+      border-radius: 8px; font-size: 12px; width: 215px; outline: none;
+    }
+    .search-input:focus { border-color: var(--primary); }
+    .mode-badge {
+      background: #dcfce7; color: #166534; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+    }
+    .mode-badge.standalone { background: #fef3c7; color: #92400e; }
+    .user-badge {
+      display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border);
+      padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    }
+    .user-avatar {
+      width: 22px; height: 22px; border-radius: 50%; background: var(--primary); color: #fff;
+      display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;
+    }
+    .btn {
+      background: var(--primary); color: #fff; border: none; padding: 8px 14px; border-radius: 8px;
+      font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn:hover { opacity: 0.92; }
+    .btn-outline { background: var(--surface); color: var(--text-main); border: 1px solid var(--border); }
+    .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 6px; }
+    .btn-danger { background: #fee2e2; color: #b91c1c; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 18px; }
+    @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; transition: transform 0.15s; }
+    .kpi-card:hover { transform: translateY(-2px); }
+    .kpi-label { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-bottom: 6px; }
+    .kpi-value { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .kpi-value.red { color: var(--red); }
+    .kpi-sub { font-size: 11px; font-weight: 600; color: var(--primary); }
+    .kpi-sub.red { color: var(--red); }
+
+    .mid-grid { display: grid; grid-template-columns: 1.35fr 1.15fr 1fr; gap: 16px; margin-bottom: 18px; }
+    @media (max-width: 1200px) { .mid-grid { grid-template-columns: 1fr; } }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .card-title { font-size: 14px; font-weight: 700; }
+    .card-tag { font-size: 11px; background: #f1f5f9; color: var(--text-muted); padding: 3px 8px; border-radius: 6px; }
+    .link-btn { font-size: 11px; color: var(--primary); font-weight: 600; cursor: pointer; background: none; border: none; }
+
+    .activity-list { display: flex; flex-direction: column; gap: 10px; }
+    .activity-item { display: flex; justify-content: space-between; align-items: flex-start; font-size: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-date { font-size: 11px; color: var(--text-muted); white-space: nowrap; margin-left: 8px; }
+
+    .bot-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 16px; }
+    @media (max-width: 1200px) { .bot-grid { grid-template-columns: 1fr; } }
+
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { text-align: left; color: var(--text-muted); font-weight: 600; padding: 8px 6px; border-bottom: 1px solid var(--border); font-size: 11px; }
+    td { padding: 9px 6px; border-bottom: 1px solid #f1f5f9; }
+    .badge { padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; display: inline-block; }
+    .badge-red { background: #fee2e2; color: #dc2626; }
+    .badge-green { background: #dcfce7; color: #16a34a; }
+    .badge-blue { background: #dbeafe; color: #2563eb; }
+    .badge-amber { background: #fef3c7; color: #d97706; }
+
+    .progress-row { margin-bottom: 12px; }
+    .progress-top { display: flex; justify-content: space-between; font-size: 12px; font-weight: 500; margin-bottom: 5px; }
+    .progress-bar { height: 7px; background: #e2e8f0; border-radius: 6px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--primary); border-radius: 6px; }
+
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+    .form-group input, .form-group select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; }
+
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45);
+      align-items: center; justify-content: center; z-index: 50;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--surface); border-radius: 14px; width: 460px; max-width: 94vw; padding: 22px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    }
+    .modal h3 { font-size: 16px; margin-bottom: 14px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+
+    .toast {
+      position: fixed; bottom: 20px; right: 20px; background: #1e293b; color: #fff;
+      padding: 10px 16px; border-radius: 8px; font-size: 12px; font-weight: 500;
+      opacity: 0; transform: translateY(10px); transition: 0.2s; z-index: 100;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    .se-card { border-left: 4px solid var(--primary); background: #f8fafc; padding: 14px 16px; border-radius: 8px; margin-bottom: 14px; }
+    .se-card h4 { font-size: 14px; color: var(--text-main); margin-bottom: 6px; }
+    .se-card p, .se-card li { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+    .se-card ul { margin-left: 18px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div>
+      <div class="brand">
+        <div class="brand-icon">L</div>
+        <div class="brand-text">
+          <h2>Library Management</h2>
+          <span>ILMS Dashboard • Reg 34</span>
+        </div>
+      </div>
+      <ul class="nav-list">
+        <li class="nav-item active" onclick="switchTab('dashboard', this)">📊 Dashboard</li>
+        <li class="nav-item" onclick="switchTab('books', this)">📚 Books &amp; Catalog</li>
+        <li class="nav-item" onclick="switchTab('circulation', this)">🔄 Circulation (Issue/Return)</li>
+        <li class="nav-item" onclick="switchTab('members', this)">👥 Members</li>
+        <li class="nav-item" onclick="switchTab('history', this)">📜 History &amp; FDS Analytics</li>
+        <li class="nav-item" onclick="switchTab('se_units', this)">🧩 SE All Units (I–V)</li>
+      </ul>
+    </div>
+    <div class="sidebar-footer">
+      <div><span id="connDot" class="status-dot"></span><strong id="connText">Connecting MySQL API...</strong></div>
+      <div style="margin-top:4px;">Java + MySQL + FDS + SE</div>
+    </div>
+  </aside>
+
+  <!-- Main Workspace -->
+  <main class="main">
+    <div class="topbar">
+      <div class="page-title">
+        <h1 id="headerTitle">Dashboard</h1>
+        <p>VCET Scenario 4: Library Book Lending &amp; Usage Analysis System (Reg No: 34)</p>
+      </div>
+      <div class="topbar-controls">
+        <span class="pill">Academic Year: <strong>2026-27</strong></span>
+        <input type="text" id="globalSearch" class="search-input" placeholder="Search title, author, ISBN, member..." onkeyup="renderAll()" />
+        <button class="btn" onclick="openAddBookModal()">+ Librarian: Add New Book</button>
+        <span id="modeBadge" class="mode-badge">Java + MySQL :8080</span>
+        <div class="user-badge">
+          <div class="user-avatar">34</div>
+          <span>Admin Librarian (34)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. DASHBOARD VIEW -->
+    <section id="view-dashboard" class="view-section active">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Books (Copies)</div>
+          <div class="kpi-value" id="kpiTotalBooks">98</div>
+          <div class="kpi-sub" id="kpiTitleCount">8 Distinct Titles</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Total Members</div>
+          <div class="kpi-value" id="kpiTotalMembers">5</div>
+          <div class="kpi-sub">IT / CSE / ECE</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Books Issued</div>
+          <div class="kpi-value" id="kpiIssued">5</div>
+          <div class="kpi-sub">Status: ISSUED</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Books Returned</div>
+          <div class="kpi-value" id="kpiReturned">3</div>
+          <div class="kpi-sub">Status: RETURNED</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Overdue Books</div>
+          <div class="kpi-value red" id="kpiOverdue">3</div>
+          <div class="kpi-sub red">Rs. 5/day Fine</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Active E-Books</div>
+          <div class="kpi-value" id="kpiEbooks">20</div>
+          <div class="kpi-sub">Digital Access</div>
+        </div>
+      </div>
+
+      <div class="mid-grid">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Daily Issue &amp; Return Activity (Date-by-Date)</span>
+            <span class="card-tag">Updates Live on Issue/Return</span>
+          </div>
+          <canvas id="dailyActivityChart" height="195"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Top Categories</span>
+            <span class="card-tag">Borrowing Share</span>
+          </div>
+          <canvas id="categoryDonutChart" height="195"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Recent Activities</span>
+            <button class="link-btn" onclick="switchTab('history', document.querySelectorAll('.nav-item')[4])">View all</button>
+          </div>
+          <div class="activity-list" id="recentActivitiesList"></div>
+        </div>
+      </div>
+
+      <div class="bot-grid">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Overdue Books</span>
+            <button class="link-btn" onclick="switchTab('circulation', document.querySelectorAll('.nav-item')[2])">Manage</button>
+          </div>
+          <table>
+            <thead><tr><th>Title</th><th>Member</th><th>Due Date</th><th>Overdue</th><th>Fine</th></tr></thead>
+            <tbody id="dashOverdueTable"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">New Members</span>
+            <button class="link-btn" onclick="switchTab('members', document.querySelectorAll('.nav-item')[3])">View all</button>
+          </div>
+          <table>
+            <thead><tr><th>Name</th><th>Dept</th><th>Joined On</th></tr></thead>
+            <tbody id="dashMembersTable"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">E-Book &amp; Book Usage</span>
+            <span class="card-tag">Top Titles</span>
+          </div>
+          <div id="topUsageBars"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. BOOKS & CATALOG VIEW -->
+    <section id="view-books" class="view-section">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Books Catalog (Add Book Updates Total Book Count Immediately)</span>
+          <button class="btn" onclick="openAddBookModal()">+ Add New Book</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Book ID</th><th>ISBN</th><th>Title</th><th>Author</th><th>Category</th>
+              <th>Type</th><th>Available / Total</th><th>Borrows</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="booksTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 3. CIRCULATION (MANUAL ISSUE DATE, DUE DATE & RETURN DATE) -->
+    <section id="view-circulation" class="view-section">
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-header">
+          <span class="card-title">Issue Book (Manual Issue Date &amp; Manual Due Date)</span>
+          <span class="card-tag">Prevents 0-copy issue • Updates Daily Graph</span>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Select Book</label>
+            <select id="issueBookSelect"></select>
+          </div>
+          <div class="form-group">
+            <label>Select Student Member</label>
+            <select id="issueMemberSelect"></select>
+          </div>
+          <div class="form-group">
+            <label>Issue Date (Manual Select)</label>
+            <input type="date" id="issueDateInput" onchange="autoSuggestDueDate()" />
+          </div>
+          <div class="form-group">
+            <label>Due Date (Manual Select)</label>
+            <input type="date" id="dueDateInput" />
+          </div>
+        </div>
+        <button class="btn" onclick="submitIssueBook()">Confirm Issue Book</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Active Loans &amp; Return Processing (Sets Status = RETURNED)</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Txn ID</th><th>Book</th><th>Student (Reg)</th><th>Issue Date</th>
+              <th>Due Date</th><th>Return Date</th><th>Fine</th><th>Status</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="circulationTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 4. MEMBERS VIEW -->
+    <section id="view-members" class="view-section">
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-header"><span class="card-title">Register Student Member (Saved to MySQL)</span></div>
+        <div class="form-grid">
+          <div class="form-group"><label>Register No</label><input type="text" id="memRegNo" placeholder="e.g., 35" /></div>
+          <div class="form-group"><label>Full Name</label><input type="text" id="memName" placeholder="e.g., Keerthana S" /></div>
+          <div class="form-group">
+            <label>Department</label>
+            <select id="memDept"><option>IT</option><option>CSE</option><option>ECE</option><option>EEE</option><option>MECH</option></select>
+          </div>
+          <div class="form-group"><label>Email</label><input type="email" id="memEmail" placeholder="student@vcet.ac.in" /></div>
+        </div>
+        <button class="btn" onclick="submitAddMember()">Save Member</button>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Registered Student Members</span></div>
+        <table>
+          <thead><tr><th>ID</th><th>Reg No</th><th>Full Name</th><th>Department</th><th>Email</th><th>Joined Date</th></tr></thead>
+          <tbody id="membersTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 5. HISTORY & FDS ANALYTICS VIEW -->
+    <section id="view-history" class="view-section">
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-header">
+          <span class="card-title">FDS Visual Analytics: Category &amp; Book Borrowing Trends</span>
+          <button class="btn btn-outline" onclick="exportCsv()">⬇ Export CSV for Python Analysis</button>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+          <div><canvas id="catBarChart" height="200"></canvas></div>
+          <div><canvas id="bookBarChart" height="200"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Complete Borrowing &amp; Return Audit History</span></div>
+        <table>
+          <thead>
+            <tr>
+              <th>Txn ID</th><th>Book Title</th><th>Student</th><th>Issue Date</th>
+              <th>Due Date</th><th>Return Date</th><th>Fine (Rs.)</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 6. SOFTWARE ENGINEERING ALL UNITS (I - V) -->
+    <section id="view-se_units" class="view-section">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Software Engineering All Units (I to V) — Complete Mapping</span>
+          <span class="card-tag">Scenario 4 • Reg No: 34</span>
+        </div>
+
+        <div class="se-card">
+          <h4>UNIT I — Software Process Model &amp; Project Scheduling</h4>
+          <p><strong>Process Model:</strong> Incremental &amp; Iterative Agile-Scrum Model. Delivered in 5 incremental builds: SRS &amp; 3NF Database → Catalog &amp; Member CRUD → Manual Date Issue/Return &amp; Fine Engine → Date-by-Date Graphs &amp; Python FDS Analytics → Verification &amp; Deployment.</p>
+        </div>
+
+        <div class="se-card">
+          <h4>UNIT II — Requirements Engineering (IEEE 830 SRS — All 8 Requirements)</h4>
+          <ul>
+            <li><strong>FR-1:</strong> Maintain book, author, category, and student membership details in MySQL.</li>
+            <li><strong>FR-2 &amp; FR-3:</strong> Issue and return books while blocking loans when <code>available_copies == 0</code>.</li>
+            <li><strong>FR-4 &amp; FR-5:</strong> Record manual Issue Date, Due Date, and Return Date; compute overdue fine at <code>Rs. 5/day</code> and set status to <code>RETURNED</code>.</li>
+            <li><strong>FR-6, FR-7 &amp; FR-8:</strong> Generate reports, feed Python FDS analytics, and visualize borrowing patterns by date, category, and book.</li>
+          </ul>
+        </div>
+
+        <div class="se-card">
+          <h4>UNIT III — System Architecture, UML &amp; 3NF Database Design</h4>
+          <p>Three-tier REST architecture: HTML/JS/Chart.js Frontend (<code>:3000</code>) ↔ Java HTTP REST API (<code>:8080</code>) ↔ 3NF Normalized MySQL Database (<code>categories</code>, <code>authors</code>, <code>books</code>, <code>members</code>, <code>transactions</code>).</p>
+        </div>
+
+        <div class="se-card">
+          <h4>UNIT IV — Software Testing (Black-Box, White-Box &amp; Boundary Cases)</h4>
+          <p>Tested: (1) Adding a new book increments Total Books KPI &amp; MySQL count; (2) Issuing a book updates the daily activity chart on the selected date; (3) Issuing a 0-copy book triggers HTTP 409 Conflict; (4) Returning a book with a manual return date computes exact overdue fine and switches status to <code>RETURNED</code>.</p>
+        </div>
+
+        <div class="se-card">
+          <h4>UNIT V — Software Maintenance, Configuration &amp; Risk Management</h4>
+          <p>Versioned modular folders (<code>backend/</code>, <code>database/</code>, <code>frontend/</code>, <code>python_fds_analytics/</code>, <code>software_engineering_all_units/</code>) with MySQL JDBC + automatic CSV fallback so the app remains 100% functional during offline or live demos.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ADD NEW BOOK MODAL -->
+  <div id="addBookModal" class="modal-backdrop">
+    <div class="modal">
+      <h3>Librarian: Add New Book (Updates Book Count)</h3>
+      <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="form-group"><label>ISBN</label><input type="text" id="newIsbn" placeholder="978-93-5551-012" /></div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="newCategory">
+            <option>Database Systems</option>
+            <option>Software &amp; Java</option>
+            <option>Computer Networks</option>
+            <option>Science &amp; AI</option>
+            <option>Engineering</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column: span 2;"><label>Book Title</label><input type="text" id="newTitle" placeholder="e.g., Operating System Concepts" /></div>
+        <div class="form-group" style="grid-column: span 2;"><label>Author Name</label><input type="text" id="newAuthor" placeholder="e.g., Abraham Silberschatz" /></div>
+        <div class="form-group"><label>Number of Copies</label><input type="number" id="newCopies" value="5" min="1" /></div>
+        <div class="form-group">
+          <label>Format</label>
+          <select id="newFormat"><option value="Physical">Physical</option><option value="E-Book">E-Book</option></select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeAddBookModal()">Cancel</button>
+        <button class="btn" onclick="submitNewBook()">Save Book &amp; Update Count</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MANUAL RETURN DATE MODAL -->
+  <div id="returnModal" class="modal-backdrop">
+    <div class="modal">
+      <h3>Return Book (Select Return Date)</h3>
+      <p id="returnModalInfo" style="font-size:12px; color:#64748b; margin-bottom:12px;"></p>
+      <input type="hidden" id="returnTxnId" />
+      <div class="form-group">
+        <label>Return Date (Manual Select)</label>
+        <input type="date" id="manualReturnDateInput" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeReturnModal()">Cancel</button>
+        <button class="btn" onclick="confirmReturnBook()">Confirm Return (Set Status = RETURNED)</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+<script>
+  const API_BASE = "http://localhost:8080/api";
+  let isLiveBackend = false;
+  let state = { books: [], members: [], transactions: [], dailyActivity: [] };
+  let charts = {};
+
+  const FALLBACK_DATA = {
+    books: [
+      { id: 101, isbn: "978-0078022159", title: "Database System Concepts", author: "Abraham Silberschatz", category: "Database Systems", totalCopies: 15, availableCopies: 13, bookType: "Physical", borrowCount: 29 },
+      { id: 102, isbn: "978-0133943030", title: "Software Engineering", author: "Ian Sommerville", category: "Engineering", totalCopies: 18, availableCopies: 17, bookType: "Physical", borrowCount: 41 },
+      { id: 103, isbn: "978-1260440232", title: "Java: The Complete Reference", author: "Herbert Schildt", category: "Software & Java", totalCopies: 14, availableCopies: 13, bookType: "Physical", borrowCount: 34 },
+      { id: 104, isbn: "978-0132126953", title: "Computer Networks", author: "Andrew S. Tanenbaum", category: "Computer Networks", totalCopies: 12, availableCopies: 11, bookType: "Physical", borrowCount: 22 },
+      { id: 105, isbn: "978-0134610993", title: "Artificial Intelligence: A Modern Approach", author: "Stuart Russell", category: "Science & AI", totalCopies: 10, availableCopies: 10, bookType: "Physical", borrowCount: 19 },
+      { id: 106, isbn: "978-0124077263", title: "Digital Design & Computer Architecture", author: "David Harris", category: "Engineering", totalCopies: 9, availableCopies: 8, bookType: "Physical", borrowCount: 15 },
+      { id: 107, isbn: "978-1491957660", title: "Python for Data Analysis", author: "Wes McKinney", category: "Science & AI", totalCopies: 10, availableCopies: 10, bookType: "E-Book", borrowCount: 27 },
+      { id: 108, isbn: "978-0132350884", title: "Clean Code", author: "Robert C. Martin", category: "Software & Java", totalCopies: 10, availableCopies: 10, bookType: "E-Book", borrowCount: 24 }
+    ],
+    members: [
+      { id: 1, regNo: "34", name: "Harshana M", department: "IT", email: "harshana34@vcet.ac.in", joinedDate: "2026-07-01" },
+      { id: 2, regNo: "04", name: "Neha Patel", department: "CSE", email: "neha04@vcet.ac.in", joinedDate: "2026-07-03" },
+      { id: 3, regNo: "64", name: "Arun Kumar", department: "ECE", email: "arun64@vcet.ac.in", joinedDate: "2026-07-05" },
+      { id: 4, regNo: "94", name: "Priya Singh", department: "IT", email: "priya94@vcet.ac.in", joinedDate: "2026-07-08" },
+      { id: 5, regNo: "21", name: "Karthik Raja", department: "CSE", email: "karthik21@vcet.ac.in", joinedDate: "2026-07-12" }
+    ],
+    transactions: [
+      { id: 1001, bookId: 103, bookTitle: "Java: The Complete Reference", category: "Software & Java", memberId: 4, memberName: "Priya Singh", regNo: "94", issueDate: "2026-11-19", dueDate: "2026-12-03", returnDate: "", fine: 0, overdueDays: 0, isOverdue: false, status: "ISSUED" },
+      { id: 1002, bookId: 102, bookTitle: "Software Engineering", category: "Engineering", memberId: 1, memberName: "Harshana M", regNo: "34", issueDate: "2026-11-18", dueDate: "2026-12-02", returnDate: "", fine: 0, overdueDays: 0, isOverdue: false, status: "ISSUED" },
+      { id: 1003, bookId: 101, bookTitle: "Database System Concepts", category: "Database Systems", memberId: 1, memberName: "Harshana M", regNo: "34", issueDate: "2026-11-17", dueDate: "2026-12-01", returnDate: "2026-11-19", fine: 0, overdueDays: 0, isOverdue: false, status: "RETURNED" },
+      { id: 1004, bookId: 104, bookTitle: "Computer Networks", category: "Computer Networks", memberId: 2, memberName: "Neha Patel", regNo: "04", issueDate: "2026-11-16", dueDate: "2026-11-30", returnDate: "2026-11-18", fine: 0, overdueDays: 0, isOverdue: false, status: "RETURNED" },
+      { id: 1005, bookId: 106, bookTitle: "Digital Design & Computer Architecture", category: "Engineering", memberId: 4, memberName: "Priya Singh", regNo: "94", issueDate: "2026-10-01", dueDate: "2026-10-15", returnDate: "", fine: 180, overdueDays: 36, isOverdue: true, status: "ISSUED" },
+      { id: 1006, bookId: 104, bookTitle: "Computer Networks", category: "Computer Networks", memberId: 3, memberName: "Arun Kumar", regNo: "64", issueDate: "2026-09-25", dueDate: "2026-10-09", returnDate: "", fine: 210, overdueDays: 42, isOverdue: true, status: "ISSUED" },
+      { id: 1007, bookId: 101, bookTitle: "Database System Concepts", category: "Database Systems", memberId: 2, memberName: "Neha Patel", regNo: "04", issueDate: "2026-09-28", dueDate: "2026-10-12", returnDate: "", fine: 195, overdueDays: 39, isOverdue: true, status: "ISSUED" }
+    ]
+  };
+
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 3200);
+  }
+
+  function autoSuggestDueDate() {
+    const iss = document.getElementById("issueDateInput").value;
+    if (iss) {
+      const d = new Date(iss);
+      d.setDate(d.getDate() + 14);
+      document.getElementById("dueDateInput").value = d.toISOString().split("T")[0];
+    }
+  }
+
+  function switchTab(tabId, el) {
+    document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+    if (el) el.classList.add("active");
+    document.querySelectorAll(".view-section").forEach(v => v.classList.remove("active"));
+    document.getElementById("view-" + tabId).classList.add("active");
+    const titles = {
+      dashboard: "Dashboard",
+      books: "Books & Catalog",
+      circulation: "Circulation (Issue / Return)",
+      members: "Members",
+      history: "History & FDS Analytics",
+      se_units: "Software Engineering All Units (I–V)"
+    };
+    document.getElementById("headerTitle").textContent = titles[tabId] || "Dashboard";
+    renderAll();
+  }
+
+  async function loadAllData() {
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (!document.getElementById("issueDateInput").value) {
+      document.getElementById("issueDateInput").value = todayStr;
+      autoSuggestDueDate();
+    }
+    try {
+      const [bRes, mRes, tRes, dRes] = await Promise.all([
+        fetch(API_BASE + "/books"),
+        fetch(API_BASE + "/members"),
+        fetch(API_BASE + "/transactions"),
+        fetch(API_BASE + "/dashboard")
+      ]);
+      if (!bRes.ok) throw new Error("API offline");
+      state.books = await bRes.json();
+      state.members = await mRes.json();
+      state.transactions = await tRes.json();
+      const dash = await dRes.json();
+      state.dailyActivity = dash.dailyActivity || [];
+      isLiveBackend = true;
+      document.getElementById("modeBadge").textContent = "Java + MySQL :8080 (" + (dash.storageMode || "Connected") + ")";
+      document.getElementById("modeBadge").classList.remove("standalone");
+      document.getElementById("connDot").classList.remove("offline");
+      document.getElementById("connText").textContent = dash.storageMode || "Backend Connected";
+    } catch (e) {
+      isLiveBackend = false;
+      if (state.books.length === 0) {
+        state.books = JSON.parse(JSON.stringify(FALLBACK_DATA.books));
+        state.members = JSON.parse(JSON.stringify(FALLBACK_DATA.members));
+        state.transactions = JSON.parse(JSON.stringify(FALLBACK_DATA.transactions));
+      }
+      computeLocalDailyActivity();
+      document.getElementById("modeBadge").textContent = "Standalone Mode (Start Java API)";
+      document.getElementById("modeBadge").classList.add("standalone");
+      document.getElementById("connDot").classList.add("offline");
+      document.getElementById("connText").textContent = "Local Standalone Mode";
+    }
+    renderAll();
+  }
+
+  function computeLocalDailyActivity() {
+    const map = {};
+    state.transactions.forEach(t => {
+      if (!map[t.issueDate]) map[t.issueDate] = { date: t.issueDate, issued: 0, returned: 0 };
+      map[t.issueDate].issued += 1;
+      if (t.returnDate) {
+        if (!map[t.returnDate]) map[t.returnDate] = { date: t.returnDate, issued: 0, returned: 0 };
+        map[t.returnDate].returned += 1;
+      }
+    });
+    state.dailyActivity = Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  function renderAll() {
+    const q = document.getElementById("globalSearch").value.toLowerCase().trim();
+
+    // Update KPI Book Counts dynamically
+    const totalCopies = state.books.reduce((s, b) => s + Number(b.totalCopies), 0);
+    const issuedCount = state.transactions.filter(t => t.status === "ISSUED").length;
+    const returnedCount = state.transactions.filter(t => t.status === "RETURNED").length;
+    const overdueTxns = state.transactions.filter(t => t.status === "ISSUED" && t.isOverdue);
+    const ebookCopies = state.books.filter(b => b.bookType === "E-Book").reduce((s, b) => s + Number(b.totalCopies), 0);
+
+    document.getElementById("kpiTotalBooks").textContent = totalCopies;
+    document.getElementById("kpiTitleCount").textContent = `${state.books.length} Distinct Titles`;
+    document.getElementById("kpiTotalMembers").textContent = state.members.length;
+    document.getElementById("kpiIssued").textContent = issuedCount;
+    document.getElementById("kpiReturned").textContent = returnedCount;
+    document.getElementById("kpiOverdue").textContent = overdueTxns.length;
+    document.getElementById("kpiEbooks").textContent = ebookCopies;
+
+    // Recent Activities
+    document.getElementById("recentActivitiesList").innerHTML = state.transactions.slice(0, 5).map(t => {
+      const msg = t.status === "RETURNED"
+        ? `<strong style="color:#16a34a">RETURNED:</strong> ${t.bookTitle} (${t.memberName})`
+        : t.isOverdue
+          ? `<strong style="color:#dc2626">OVERDUE:</strong> ${t.bookTitle} (${t.memberName})`
+          : `<strong>ISSUED:</strong> ${t.bookTitle} (${t.memberName})`;
+      return `<div class="activity-item"><span>${msg}</span><span class="activity-date">${t.returnDate || t.issueDate}</span></div>`;
+    }).join("");
+
+    // Dashboard Overdue
+    document.getElementById("dashOverdueTable").innerHTML = overdueTxns.length
+      ? overdueTxns.slice(0, 4).map(t => `
+          <tr>
+            <td><strong>${t.bookTitle}</strong></td>
+            <td>${t.memberName}</td>
+            <td>${t.dueDate}</td>
+            <td><span class="badge badge-red">${t.overdueDays}d</span></td>
+            <td><strong>Rs. ${t.fine}</strong></td>
+          </tr>`).join("")
+      : `<tr><td colspan="5" style="color:#64748b">No overdue books.</td></tr>`;
+
+    // Dashboard New Members
+    document.getElementById("dashMembersTable").innerHTML = state.members.slice(0, 4).map(m => `
+      <tr>
+        <td><strong>${m.name}</strong></td>
+        <td><span class="badge badge-blue">${m.department}</span></td>
+        <td>${m.joinedDate}</td>
+      </tr>`).join("");
+
+    // Top Usage Progress Bars
+    const topBooks = [...state.books].sort((a, b) => b.borrowCount - a.borrowCount).slice(0, 4);
+    const maxB = Math.max(1, ...topBooks.map(b => b.borrowCount));
+    document.getElementById("topUsageBars").innerHTML = topBooks.map(b => {
+      const pct = Math.min(100, Math.round((b.borrowCount / maxB) * 100));
+      return `
+        <div class="progress-row">
+          <div class="progress-top"><span>${b.title}</span><strong>${b.borrowCount}</strong></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        </div>`;
+    }).join("");
+
+    // Books Table
+    const fBooks = state.books.filter(b =>
+      !q || b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q) || b.isbn.toLowerCase().includes(q) || b.category.toLowerCase().includes(q)
+    );
+    document.getElementById("booksTableBody").innerHTML = fBooks.map(b => `
+      <tr>
+        <td>#${b.id}</td>
+        <td>${b.isbn}</td>
+        <td><strong>${b.title}</strong></td>
+        <td>${b.author}</td>
+        <td><span class="badge badge-blue">${b.category}</span></td>
+        <td>${b.bookType}</td>
+        <td><span class="badge ${b.availableCopies > 0 ? 'badge-green' : 'badge-red'}">${b.availableCopies} / ${b.totalCopies}</span></td>
+        <td>${b.borrowCount}</td>
+        <td><button class="btn btn-sm btn-danger" onclick="deleteBook(${b.id})">Delete</button></td>
+      </tr>`).join("");
+
+    // Issue Dropdowns
+    document.getElementById("issueBookSelect").innerHTML = state.books.map(b =>
+      `<option value="${b.id}" ${b.availableCopies <= 0 ? 'disabled' : ''}>${b.title} (${b.availableCopies} available)</option>`
+    ).join("");
+    document.getElementById("issueMemberSelect").innerHTML = state.members.map(m =>
+      `<option value="${m.id}">Reg ${m.regNo} - ${m.name} (${m.department})</option>`
+    ).join("");
+
+    // Circulation & History Tables
+    const fTxns = state.transactions.filter(t =>
+      !q || t.bookTitle.toLowerCase().includes(q) || t.memberName.toLowerCase().includes(q) || String(t.regNo).includes(q)
+    );
+    document.getElementById("circulationTableBody").innerHTML = fTxns.map(t => `
+      <tr>
+        <td>#${t.id}</td>
+        <td><strong>${t.bookTitle}</strong></td>
+        <td>${t.memberName} (Reg ${t.regNo})</td>
+        <td>${t.issueDate}</td>
+        <td>${t.dueDate}</td>
+        <td>${t.returnDate || '-'}</td>
+        <td><strong>Rs. ${t.fine}</strong></td>
+        <td>
+          ${t.status === 'RETURNED'
+            ? '<span class="badge badge-green">RETURNED</span>'
+            : t.isOverdue
+              ? `<span class="badge badge-red">ISSUED (Overdue ${t.overdueDays}d)</span>`
+              : '<span class="badge badge-amber">ISSUED</span>'}
+        </td>
+        <td>
+          ${t.status === 'ISSUED'
+            ? `<button class="btn btn-sm" onclick="openReturnModal(${t.id}, '${t.bookTitle.replace(/'/g, "\\'")}', '${t.dueDate}')">Return Book</button>`
+            : '<span style="color:#16a34a;font-size:11px;font-weight:600;">✓ Completed</span>'}
+        </td>
+      </tr>`).join("");
+
+    document.getElementById("historyTableBody").innerHTML = fTxns.map(t => `
+      <tr>
+        <td>#${t.id}</td>
+        <td><strong>${t.bookTitle}</strong></td>
+        <td>${t.memberName} (Reg ${t.regNo})</td>
+        <td>${t.issueDate}</td>
+        <td>${t.dueDate}</td>
+        <td>${t.returnDate || '-'}</td>
+        <td><strong>Rs. ${t.fine}</strong></td>
+        <td><span class="badge ${t.status === 'RETURNED' ? 'badge-green' : 'badge-amber'}">${t.status}</span></td>
+      </tr>`).join("");
+
+    // Members Table
+    const fMembers = state.members.filter(m =>
+      !q || m.name.toLowerCase().includes(q) || m.regNo.toLowerCase().includes(q) || m.department.toLowerCase().includes(q)
+    );
+    document.getElementById("membersTableBody").innerHTML = fMembers.map(m => `
+      <tr>
+        <td>#${m.id}</td>
+        <td><strong>${m.regNo}</strong></td>
+        <td>${m.name}</td>
+        <td><span class="badge badge-blue">${m.department}</span></td>
+        <td>${m.email}</td>
+        <td>${m.joinedDate}</td>
+      </tr>`).join("");
+
+    renderCharts();
+  }
+
+  function renderCharts() {
+    // 1. Date-by-Date Daily Issue & Return Activity Graph
+    const ctxDaily = document.getElementById("dailyActivityChart");
+    if (ctxDaily) {
+      if (charts.daily) charts.daily.destroy();
+      const labels = state.dailyActivity.map(d => d.date);
+      const issuedSeries = state.dailyActivity.map(d => d.issued);
+      const returnedSeries = state.dailyActivity.map(d => d.returned);
+
+      charts.daily = new Chart(ctxDaily, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [
+            { label: "Books Issued (Date-by-Date)", data: issuedSeries, borderColor: "#10a37f", backgroundColor: "rgba(16,163,127,0.12)", fill: true, tension: 0.3, pointRadius: 4 },
+            { label: "Books Returned (Date-by-Date)", data: returnedSeries, borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,0.10)", fill: true, tension: 0.3, pointRadius: 4 }
+          ]
+        },
+        options: {
+          plugins: { legend: { position: "top" } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+    }
+
+    // 2. Category Donut Chart
+    const catMap = {};
+    state.books.forEach(b => { catMap[b.category] = (catMap[b.category] || 0) + b.borrowCount; });
+    const catLabels = Object.keys(catMap);
+    const catVals = Object.values(catMap);
+
+    const ctxDonut = document.getElementById("categoryDonutChart");
+    if (ctxDonut) {
+      if (charts.donut) charts.donut.destroy();
+      charts.donut = new Chart(ctxDonut, {
+        type: "doughnut",
+        data: {
+          labels: catLabels,
+          datasets: [{ data: catVals, backgroundColor: ["#10a37f", "#2563eb", "#f59e0b", "#7c3aed", "#06b6d4"], borderWidth: 2 }]
+        },
+        options: { cutout: "62%", plugins: { legend: { position: "top", labels: { boxWidth: 11, font: { size: 11 } } } } }
+      });
+    }
+
+    // 3. History & FDS Analytics Bar Charts
+    const ctxCatBar = document.getElementById("catBarChart");
+    if (ctxCatBar && document.getElementById("view-history").classList.contains("active")) {
+      if (charts.catBar) charts.catBar.destroy();
+      charts.catBar = new Chart(ctxCatBar, {
+        type: "bar",
+        data: { labels: catLabels, datasets: [{ label: "Borrows by Category", data: catVals, backgroundColor: "#10a37f", borderRadius: 6 }] }
+      });
+    }
+    const ctxBookBar = document.getElementById("bookBarChart");
+    if (ctxBookBar && document.getElementById("view-history").classList.contains("active")) {
+      if (charts.bookBar) charts.bookBar.destroy();
+      const top5 = [...state.books].sort((a, b) => b.borrowCount - a.borrowCount).slice(0, 5);
+      charts.bookBar = new Chart(ctxBookBar, {
+        type: "bar",
+        data: {
+          labels: top5.map(b => b.title.slice(0, 18) + "..."),
+          datasets: [{ label: "Top Borrowed Books", data: top5.map(b => b.borrowCount), backgroundColor: "#2563eb", borderRadius: 6 }]
+        }
+      });
+    }
+  }
+
+  function openAddBookModal() { document.getElementById("addBookModal").classList.add("open"); }
+  function closeAddBookModal() { document.getElementById("addBookModal").classList.remove("open"); }
+
+  async function submitNewBook() {
+    const payload = {
+      isbn: document.getElementById("newIsbn").value.trim() || ("978-93-" + Math.floor(1000 + Math.random() * 9000)),
+      title: document.getElementById("newTitle").value.trim(),
+      author: document.getElementById("newAuthor").value.trim(),
+      category: document.getElementById("newCategory").value,
+      totalCopies: parseInt(document.getElementById("newCopies").value || "3"),
+      bookType: document.getElementById("newFormat").value
+    };
+    if (!payload.title || !payload.author) {
+      showToast("Please enter both Book Title and Author!");
+      return;
+    }
+    if (isLiveBackend) {
+      const res = await fetch(API_BASE + "/books", { method: "POST", body: JSON.stringify(payload) });
+      if (res.ok) {
+        closeAddBookModal();
+        showToast("Book added to MySQL & Total Book Count updated!");
+        await loadAllData();
+      }
+    } else {
+      state.books.unshift({ id: 100 + state.books.length + 1, ...payload, availableCopies: payload.totalCopies, borrowCount: 0 });
+      closeAddBookModal();
+      showToast("Book added & Total Book Count updated!");
+      renderAll();
+    }
+    document.getElementById("newTitle").value = "";
+    document.getElementById("newAuthor").value = "";
+  }
+
+  async function deleteBook(id) {
+    if (isLiveBackend) {
+      await fetch(API_BASE + "/books?id=" + id, { method: "DELETE" });
+      showToast("Book deleted & count updated");
+      await loadAllData();
+    } else {
+      state.books = state.books.filter(b => b.id !== id);
+      renderAll();
+    }
+  }
+
+  async function submitIssueBook() {
+    const bookId = parseInt(document.getElementById("issueBookSelect").value);
+    const memberId = parseInt(document.getElementById("issueMemberSelect").value);
+    const issueDate = document.getElementById("issueDateInput").value;
+    const dueDate = document.getElementById("dueDateInput").value;
+
+    if (!issueDate || !dueDate) {
+      showToast("Please select both Issue Date and Due Date!");
+      return;
+    }
+
+    if (isLiveBackend) {
+      const res = await fetch(API_BASE + "/issue", {
+        method: "POST",
+        body: JSON.stringify({ bookId, memberId, issueDate, dueDate })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast("Error: " + (data.error || "Cannot issue"));
+        return;
+      }
+      showToast(`Book issued on ${issueDate}! Daily activity graph updated.`);
+      await loadAllData();
+    } else {
+      const b = state.books.find(x => x.id === bookId);
+      const m = state.members.find(x => x.id === memberId);
+      if (!b || b.availableCopies <= 0) { showToast("Cannot issue: 0 available copies!"); return; }
+      b.availableCopies -= 1;
+      b.borrowCount += 1;
+      state.transactions.unshift({
+        id: 1000 + state.transactions.length + 1, bookId, bookTitle: b.title, category: b.category,
+        memberId, memberName: m.name, regNo: m.regNo, issueDate, dueDate, returnDate: "",
+        fine: 0, overdueDays: 0, isOverdue: false, status: "ISSUED"
+      });
+      computeLocalDailyActivity();
+      showToast(`Book issued on ${issueDate}! Daily graph updated.`);
+      renderAll();
+    }
+  }
+
+  function openReturnModal(txnId, bookTitle, dueDate) {
+    document.getElementById("returnTxnId").value = txnId;
+    document.getElementById("returnModalInfo").textContent = `Book: ${bookTitle} | Due Date: ${dueDate} (Fine: Rs. 5/day if returned late)`;
+    document.getElementById("manualReturnDateInput").value = new Date().toISOString().split("T")[0];
+    document.getElementById("returnModal").classList.add("open");
+  }
+
+  function closeReturnModal() { document.getElementById("returnModal").classList.remove("open"); }
+
+  async function confirmReturnBook() {
+    const txnId = parseInt(document.getElementById("returnTxnId").value);
+    const returnDate = document.getElementById("manualReturnDateInput").value;
+    if (!returnDate) { showToast("Please select a Return Date!"); return; }
+
+    if (isLiveBackend) {
+      const res = await fetch(API_BASE + "/return", {
+        method: "POST",
+        body: JSON.stringify({ txnId, returnDate })
+      });
+      const data = await res.json();
+      closeReturnModal();
+      showToast(`Status set to RETURNED! Fine: Rs. ${data.fine || 0}`);
+      await loadAllData();
+    } else {
+      const t = state.transactions.find(x => x.id === txnId);
+      if (t) {
+        const diff = Math.floor((new Date(returnDate) - new Date(t.dueDate)) / 86400000);
+        t.fine = diff > 0 ? diff * 5 : 0;
+        t.returnDate = returnDate;
+        t.status = "RETURNED";
+        t.isOverdue = false;
+        const b = state.books.find(x => x.id === t.bookId);
+        if (b && b.availableCopies < b.totalCopies) b.availableCopies += 1;
+        computeLocalDailyActivity();
+        closeReturnModal();
+        showToast(`Status set to RETURNED! Fine: Rs. ${t.fine}`);
+        renderAll();
+      }
+    }
+  }
+
+  async function submitAddMember() {
+    const payload = {
+      regNo: document.getElementById("memRegNo").value.trim(),
+      name: document.getElementById("memName").value.trim(),
+      department: document.getElementById("memDept").value,
+      email: document.getElementById("memEmail").value.trim()
+    };
+    if (!payload.regNo || !payload.name) {
+      showToast("Register No and Full Name are required!");
+      return;
+    }
+    if (isLiveBackend) {
+      await fetch(API_BASE + "/members", { method: "POST", body: JSON.stringify(payload) });
+      showToast("Member saved to MySQL!");
+      await loadAllData();
+    } else {
+      state.members.unshift({ id: state.members.length + 1, ...payload, joinedDate: new Date().toISOString().split("T")[0] });
+      renderAll();
+    }
+    document.getElementById("memRegNo").value = "";
+    document.getElementById("memName").value = "";
+  }
+
+  function exportCsv() {
+    const rows = ["txn_id,book_title,category,student_name,reg_no,issue_date,due_date,return_date,fine,status"];
+    state.transactions.forEach(t => {
+      rows.push(`${t.id},"${t.bookTitle}","${t.category}","${t.memberName}",${t.regNo},${t.issueDate},${t.dueDate},${t.returnDate},${t.fine},${t.status}`);
+    });
+    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "vcet_ilms_mysql_export_reg34.csv";
+    a.click();
+    showToast("CSV exported for Python FDS Analytics!");
+  }
+
+  loadAllData();
+</script>
+</body>
+</html>
